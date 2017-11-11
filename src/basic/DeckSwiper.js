@@ -72,6 +72,18 @@ class DeckSwiper extends Component {
 		}
 		return [newIdx, newIdx2];
 	}
+	
+	findPrevIndexes(currentIndex) {
+		const newIdx = currentIndex - 1;
+		const newIdx2 = currentIndex - 2;
+
+		if (newIdx2 > this.props.dataSource.length - 1 && newIdx === this.props.dataSource.length - 1) {
+			return [newIdx, 0];
+		} else if (newIdx > this.props.dataSource.length - 1) {
+			return [0, 1];
+		}
+		return [newIdx, newIdx2];
+	}
 
 	selectNext() {
 		const dataSource = this.props.dataSource;
@@ -112,12 +124,51 @@ class DeckSwiper extends Component {
 		}, 50);
 	}
 
+	selectPrevious() {
+		const dataSource = this.props.dataSource;
+		const currentIndex = dataSource.indexOf(this.state.selectedItem);
+
+		// if not looping, check for these conditionals and if true return from selectPrevious()
+		if (!this.state.looping) {
+			// reached end -> only display static renderEmpty() -> no swiping
+			if (currentIndex === dataSource.length - 1) {
+				return this.setState({
+					disabled: true,
+				});
+			} else if (currentIndex === dataSource.length - 2) {
+				// show last card with renderEmpty() component behind it
+				return setTimeout(() => {
+					this.setState({
+						selectedItem: dataSource[currentIndex + 1],
+					});
+					setTimeout(() => {
+						this.setState({
+							lastCard: true,
+						});
+					}, 350);
+				}, 50);
+			}
+		}
+
+		const nextIndexes = this.findPrevIndexes(currentIndex);
+		setTimeout(() => {
+			this.setState({
+				selectedItem: this.props.dataSource[nextIndexes[0]],
+			});
+			setTimeout(() => {
+				this.setState({
+					selectedItem2: this.props.dataSource[nextIndexes[1]],
+				});
+			}, 350);
+		}, 50);
+	}	
+	
 	swipeRight() {
 		if (this.props.onSwiping) this.props.onSwiping("right");
 		setTimeout(() => {
 			Animated.timing(this.state.fadeAnim, { toValue: 1 }).start();
 			Animated.spring(this.state.enter, { toValue: 1, friction: 7 }).start();
-			this.selectNext();
+			this.selectPrevious();
 			Animated.decay(this.state.pan, {
 				velocity: { x: 8, y: 1 },
 				deceleration: 0.98,
@@ -183,7 +234,7 @@ class DeckSwiper extends Component {
 				if (Math.abs(this.state.pan.x._value) > SWIPE_THRESHOLD) {
 					if (velocity > 0) {
 						this.props.onSwipeRight ? this.props.onSwipeRight(this.state.selectedItem) : undefined;
-						this.selectNext();
+						this.selectPrevious();
 					} else {
 						this.props.onSwipeLeft ? this.props.onSwipeLeft(this.state.selectedItem) : undefined;
 						this.selectNext();
